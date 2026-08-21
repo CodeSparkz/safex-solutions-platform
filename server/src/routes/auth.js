@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.post("/login", async (req, res) => {
   try {
+    // Get and validate request data
     const email =
       typeof req.body?.email === "string"
         ? req.body.email.trim()
@@ -16,6 +17,7 @@ router.post("/login", async (req, res) => {
         ? req.body.password
         : "";
 
+    // Get environment variables safely
     const configuredEmail =
       typeof process.env.ADMIN_EMAIL === "string"
         ? process.env.ADMIN_EMAIL.trim().toLowerCase()
@@ -28,17 +30,17 @@ router.post("/login", async (req, res) => {
 
     const jwtSecret =
       typeof process.env.JWT_SECRET === "string"
-        ? process.env.JWT_SECRET
+        ? process.env.JWT_SECRET.trim()
         : "";
 
-    // Check request data
+    // Check login request
     if (!email || !password) {
       return res.status(400).json({
         message: "Email and password are required."
       });
     }
 
-    // Check server configuration
+    // Check environment variables
     if (!configuredEmail || !configuredHash || !jwtSecret) {
       console.error("Admin authentication environment variables are missing.");
 
@@ -48,28 +50,49 @@ router.post("/login", async (req, res) => {
     }
 
     // Validate bcrypt hash
-    if (!/^\$2[aby]\$\d{2}\$/.test(configuredHash)) {
-      console.error("ADMIN_PASSWORD_HASH is not a valid bcrypt hash.");
+    if (
+      !/^\$2[aby]\$\d{2}\$/.test(configuredHash) ||
+      configuredHash.length !== 60
+    ) {
+      console.error("ADMIN_PASSWORD_HASH is invalid.", {
+        hashLength: configuredHash.length
+      });
 
       return res.status(500).json({
         message: "Admin password configuration is invalid."
       });
     }
 
+    // Temporary debug information
+    // This does NOT log your password, hash, or JWT secret
+    console.log("LOGIN DEBUG:", {
+      email,
+      passwordType: typeof password,
+      passwordLength: password.length,
+      configuredEmailExists: Boolean(configuredEmail),
+      configuredHashType: typeof configuredHash,
+      configuredHashLength: configuredHash.length,
+      jwtSecretExists: Boolean(jwtSecret)
+    });
+
+    // Validate email
     const validEmail =
       email.toLowerCase() === configuredEmail;
 
+    // Validate password
     const validPassword = await bcrypt.compare(
       password,
       configuredHash
     );
 
+    // Reject invalid credentials
     if (!validEmail || !validPassword) {
       return res.status(401).json({
         message: "Invalid admin credentials."
       });
     }
 
+    // Create JWT token
     const token = jwt.sign(
       {
         role: "admin",
@@ -81,7 +104,7 @@ router.post("/login", async (req, res) => {
       }
     );
 
-    return res.json({
+    return res.status(200).json({
       token,
       admin: {
         email: configuredEmail,
@@ -90,10 +113,13 @@ router.post("/login", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Admin login error:", error);
+    console.error("Admin login error:", {
+      message: error?.message,
+      stack: error?.stack
+    });
 
     return res.status(500).json({
-      message: "Server error during login."
+      message: error?.message || "Server error during login."
     });
   }
 });
