@@ -63,18 +63,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Temporary debug information
-    // This does NOT log your password, hash, or JWT secret
-    console.log("LOGIN DEBUG:", {
-      email,
-      passwordType: typeof password,
-      passwordLength: password.length,
-      configuredEmailExists: Boolean(configuredEmail),
-      configuredHashType: typeof configuredHash,
-      configuredHashLength: configuredHash.length,
-      jwtSecretExists: Boolean(jwtSecret)
-    });
-
     // Validate email
     const validEmail =
       email.toLowerCase() === configuredEmail;

@@ -15,8 +15,6 @@ import { notFound, errorHandler } from "./middleware/error.js";
 import { seedServices } from "./seed/services.js";
 
 const app = express();
-app.set("trust proxy", 1);
-// IMPORTANT: Netlify runs the Express app behind a proxy.
 // This must be set BEFORE express-rate-limit is used.
 app.set("trust proxy", 1);
 
